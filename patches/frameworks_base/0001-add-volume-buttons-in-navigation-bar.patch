@@ -1,0 +1,338 @@
+From 478f360f8e2e8eb7bf8b22042357cecdf401f043 Mon Sep 17 00:00:00 2001
+From: netlars <netlars@gmx.de>
+Date: Wed, 19 Nov 2014 17:51:11 +0100
+Subject: [PATCH] add volume buttons in navigation bar
+
+---
+ packages/SystemUI/res/drawable/add_normal.png      | Bin 0 -> 1487 bytes
+ packages/SystemUI/res/drawable/sub_normal.png      | Bin 0 -> 1142 bytes
+ .../SystemUI/res/layout-sw600dp/navigation_bar.xml |  46 +++++++++++++-
+ .../statusbar/phone/NavigationBarView.java         |  21 ++++++-
+ .../systemui/statusbar/policy/KeyButtonView.java   |  66 +++++++++++++++++++++
+ 5 files changed, 131 insertions(+), 2 deletions(-)
+ create mode 100644 packages/SystemUI/res/drawable/add_normal.png
+ create mode 100644 packages/SystemUI/res/drawable/sub_normal.png
+
+diff --git a/packages/SystemUI/res/drawable/add_normal.png b/packages/SystemUI/res/drawable/add_normal.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..b959941ade5f0f6e086ef8fb0522e630086b842a
+GIT binary patch
+literal 1487
+zcmV;=1u*)FP)<h;3K|Lk000e1NJLTq004LZ002k`1ONa4mlyf;00009a7bBm000XT
+z000XT0n*)m`~Uy|1ZP1_K>z@;j(q!3lK=n!AY({UO#lFTB>(_`g8%^e{{R4h=>PzA
+zFaQARU;qF*m;eA5Z<1fdMgRZ>MM*?KRCwC#nqO>Fbri?H_qN-*F)ED7fKIjw8}i4<
+zYL*b928`g7Bt{c4Vho7J7ZSk4KZ!<TFrvl>Ux-NLMdPAIqLBxKA@YD|?z(OrV}q{U
+z|3bU}EnC;Fr}y~q>rKo4;3Ngw^1Hv6-#x$cyS<-#&ON{1IkyVq-a1rBU<oXNC9njR
+zz!F#jOJE5sfhDj6mcTG)>OzTIoY%JBvNOEfq2DNVnH`jVZps%6cYIRw^`fn_a7!vY
+zy;|P6bhD-F?7DY~6g@gaZm+mxvscyo&g2zv%cd2b4?a29&lkO9s|Eo3j*idr2Doi+
+zwYIWy?y>06u0O@CRln(eG%tWXC)Rzlq<Fqj2aP}F_W?k$TK-ec1G}ufTJ8P<<z_k#
+zeQ-xO1^_mD`-eFV+`7H8tEyh~hsQ%R!j<<&&-bEN*FEsDC?HoHa+PHC7C1wV7SP-W
+z$ES%!^SPY1Ys19Ey<P%AvwF@FPjl=0hIW6y(7bqrGIp1ICxI`Yis}MkN^d_&(9D6c
+z6mZjqaGaPp6nAYA`YrpSOiX-rNK-QhtYqrTgX;+p04QK6NL^I{0||BM(l0A(g(Mv7
+zKd|ux;IgjnEnfooeYUj#(DqvG@j?agdu=sBGvHsb3Ltds+WcGAx%8wynV7#tbi<Vg
+z{7v=3f|^xWxaUgB2Z)Jd+_G1kUpyk_v^Qj<OY=fn=Q*v!z%zgcuQ%G05=(HLn7FT7
+zQwaoTZ75Dm><?rP_zp(tDgE*n_HB;HOnF&p#W|N5036Z5uNc7cD$`Z~*z5@h0Kj^G
+z7G_HT5M%%Ei4ar;02}YGc#{?8=noH{x>4U)j90A=e~v={Fm-g|@ZtiqQv5p31Hfbx
+zDuDtu8<!;}4#l-H!a|$j(!|6=6Pj5_z5fss_w|Ug*0;rY*1EK*eBrtZQroTj78Sml
+z+)1AU0LwDr<nh1qwBn({vQzZPqXQ@?QtSZ0!;wVZ05j6}0H$PM(g)%?U{cj(;*>d$
+zEId~R!BPF*DB|f;$%kMoQ~_p=0RVGW11taAsZ+h!h2%Q9+5}*FTJHt`)mmiEVqgZY
+z-&&NOO2ocP7I?M;KrHMS2LN?_hIuo)@lX}@F?Y{g4^dHogtLz3n>pB6=Mz0^Jpe>H
+z((&~SmT5BzY%#5E;CbyC8gf7P$c4G0bT~G)r&`pyUS3}Y0F%eXNXg>>5a)vI+-dz+
+z8;!c(NbR&5t-&#3;xM)BGi1Hp#KggnNHMh1;RrGD;6zR)4}i63-LcMwnHC=F*>o~l
+z%RI2M8URLq7AZ#Iv!%rVFy54f@38k*%)fvpP`LbQYY|{pYIgT;9NOj>ogJ**wN;<0
+z0LCUK4hzZRgJuAXNJ9?Rv|L-R4jZl=7<26;G?oU_N<7YrfosIX)7<*5nBlAq6EX2{
+zL@Ue5nwD1L{o6neQ|kwWz-W3APXKqGH}pMch3@5Fa<qs?AY3{&nGhH;_MAz#FhMIH
+zxYpNeR79G#i?Y!5gmXg<0~4BG6p>fBZ#pnRvuLG8f8eUnxpJD2)4+trn!cX&#VQ4y
+zYVF^Ov5_ffMP`BTLh?}88F;AckDKL0m)=^lM+8*=N1KDUAuGMJ7ETs#-V-r+wuPHt
+zF^an03x+JGEi8@=M|{tZgy$TJ>kI(F;OMT~RCl-=78Yx7cN=kE_pHG7LYRgljcZbp
+zEd11RtEDI3>B8y<HqH9V_zaJvCmNZ{mhL(*;I7x3=T9877C2W9`A<9vEP*Ak1eU-O
+pSOQC62`qsnumqOC_hLT$?*RU6`QfBoYMuZ9002ovPDHLkV1n4FzM%jB
+
+literal 0
+HcmV?d00001
+
+diff --git a/packages/SystemUI/res/drawable/sub_normal.png b/packages/SystemUI/res/drawable/sub_normal.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..ceef71c1ca847336b76804639d276ea3a1b462a7
+GIT binary patch
+literal 1142
+zcmV-+1d02JP)<h;3K|Lk000e1NJLTq004LZ002k`1ONa4mlyf;00009a7bBm000XT
+z000XT0n*)m`~Uy|1ZP1_K>z@;j(q!3lK=n!AY({UO#lFTB>(_`g8%^e{{R4h=>PzA
+zFaQARU;qF*m;eA5Z<1fdMgRZ<>`6pHRCwC#n_WzkR~X0t=PfNw`4IUC%6BLf#ip&w
+zqR}`tCfjr-dZA%ivMjq`+r^g6i_N>u=$+1wC1#14-l<vQu0}L|%#rL?WUnny3RoMU
+zMYb^uNI&58oL#&yX;FggEtK~?=UnvZ`<&C$-+9h?&U2ooghO9Nf&do40$2bGU;!+E
+z1+V}XzyeqR3*h-BOWlu4{Exnme~Py?UP^sx(58jm>w`XPvs9pyCEdBNqNm&j@VG93
+zdrnyI6y^hbHSXcpFaF!Mx0iF)R}|P?U2?zHs+(h}tGTLsy>+=qT`^$aY3ua@iy}u^
+zvQEx&H);$x&}RF}ECB#R|JC7J$=ag!TG_o-Gr;b~kzmap0sx34`o5|AU~ar3n+7^6
+zow>%cyK<o>fV)1dZZ9oU<k9exLk*`=!YL|c13+=%+Fw?Im+rf~u-;H%d&{U87en2D
+z?{tMzTez6K%^WB$0?K!G9<l$dIx$zZQogtv<Gvddv$eOCa>}Q<r$u=$@10CgPWjLv
+zRr&kzm2p~=wC|YpXzEjfyf0)40PJm{Ujd+`!gD|aPV28x|Bj6pUZ$zoly_Z`CO(fQ
+z00Z)lt35hVH-b%YfWd!_dS1PUVn4W^r-YZSwFea`&U{UdKLB7*u5<#=CW~`3KD6YB
+zU9q<<t#7uJe-3*A;Q3WJfgH=KSkk0u>3!EU$rb>Zz8_<NiD*8>lba*e0RZ#H(sDb_
+zIA9|&H~_#EqcL3o1JauRoPi#IIq0JqPax?6I5N$i0DxRzH0uI59B>8!z~D4zr(;#8
+z1(=U7z3=!;X4<shM1U!l;kPAa4oj~+jo{@cC?RD0X8k9x>iaYlKd(sn%>Xd|%#!)Q
+z1SQ1_=}SKzY#QC28eRgx#MGaMT?_y`J2q4Uz}UTYTG+#tTgn5S+voe|;9185MP7T!
+zNPswxe3#)%I>r`sGn^15lT}h=`Q3Yb<N0JY8&Y1qpElS5VC13WVTJ?uZU#+W-h8ga
+zNKXF6>g@oKW2`^h|3=;WNv%x);MrR9y#yed2)9(F<DgeH<FSb9{V~F3GarGj_QE+C
+zk1r|O&7l!R*L{&f6B&>CmcEb1qBB?i#wx#i8=IJ;o*HXS02u1FeU_$BZn-T?LD69k
+z24}4to(hIuSeSysdpQ{DC{<*&Ev$CNW6>?;tb*Tab|p`J&$0QbAI<zA?xHns`p(4J
+za*w;Bv2?@N{qKb%IsyhZ-596~`E>*gIEKrt{yR)RzyMJDPVdPmBl-abHhlZ|-G9bN
+zZu&<e;%__xSO5!P0W5$8umBdo0$2bGU;!+EbqK7x`|!U50K3MPvJK=m^#A|>07*qo
+IM6N<$f;NE?8~^|S
+
+literal 0
+HcmV?d00001
+
+diff --git a/packages/SystemUI/res/layout-sw600dp/navigation_bar.xml b/packages/SystemUI/res/layout-sw600dp/navigation_bar.xml
+index c2733fb..f16f0a6 100644
+--- a/packages/SystemUI/res/layout-sw600dp/navigation_bar.xml
++++ b/packages/SystemUI/res/layout-sw600dp/navigation_bar.xml
+@@ -53,6 +53,17 @@
+                 android:layout_height="match_parent"
+                 android:layout_weight="1"
+                 />
++            <com.android.systemui.statusbar.policy.KeyButtonView
++                android:id="@+id/sub"
++		        android:layout_width="98dp"
++		        android:layout_height="match_parent"
++		        android:layout_weight="0"
++		        android:contentDescription="@string/accessibility_recent"
++		        android:paddingLeft="15dp"
++		        android:paddingRight="15dp"
++		        android:src="@drawable/sub_normal"
++		        android:visibility="invisible"
++		        systemui:keyCode="25" />
+             <com.android.systemui.statusbar.policy.KeyButtonView android:id="@+id/back"
+                 android:layout_width="128dp" android:paddingStart="25dp" android:paddingEnd="25dp"
+                 android:layout_height="match_parent"
+@@ -77,6 +88,17 @@
+                 android:layout_weight="0"
+                 android:contentDescription="@string/accessibility_recent"
+                 />
++	        <com.android.systemui.statusbar.policy.KeyButtonView
++                android:id="@+id/add"
++		        android:layout_width="98dp"
++		        android:layout_height="match_parent"
++		        android:layout_weight="0"
++		        android:contentDescription="@string/accessibility_recent"
++		        android:paddingLeft="15dp"
++		        android:paddingRight="15dp"
++		        android:src="@drawable/add_normal"
++		        android:visibility="invisible"
++		        systemui:keyCode="24" />
+             <Space 
+                 android:layout_width="match_parent"
+                 android:layout_height="match_parent"
+@@ -194,6 +216,17 @@
+                 android:layout_height="match_parent"
+                 android:layout_weight="1"
+                 />
++	        <com.android.systemui.statusbar.policy.KeyButtonView
++                android:id="@+id/sub"
++                android:layout_width="100dp"
++                android:layout_height="match_parent"
++                android:layout_weight="0"
++                android:contentDescription="@string/accessibility_recent"
++                android:paddingLeft="10dp"
++                android:paddingRight="10dp"
++                android:src="@drawable/sub_normal"
++                android:visibility="invisible"
++                systemui:keyCode="25" />
+             <com.android.systemui.statusbar.policy.KeyButtonView android:id="@+id/back"
+                 android:layout_width="162dp" android:paddingStart="42dp" android:paddingEnd="42dp"
+                 android:layout_height="match_parent"
+@@ -217,7 +250,18 @@
+                 android:src="@drawable/ic_sysbar_recent"
+                 android:layout_weight="0"
+                 android:contentDescription="@string/accessibility_recent"
+-                />
++                 />
++            <com.android.systemui.statusbar.policy.KeyButtonView
++                android:id="@+id/add"
++                android:layout_width="100dp"
++                android:layout_height="match_parent"
++                android:layout_weight="0"
++                android:contentDescription="@string/accessibility_recent"
++                android:paddingLeft="10dp"
++                android:paddingRight="10dp"
++                android:src="@drawable/add_normal"
++                android:visibility="invisible"
++                systemui:keyCode="24" />  
+             <Space 
+                 android:layout_width="match_parent"
+                 android:layout_height="match_parent"
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/phone/NavigationBarView.java b/packages/SystemUI/src/com/android/systemui/statusbar/phone/NavigationBarView.java
+index 88e71e2..27cf283 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/phone/NavigationBarView.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/phone/NavigationBarView.java
+@@ -45,11 +45,13 @@ import com.android.systemui.R;
+ import com.android.systemui.statusbar.BaseStatusBar;
+ import com.android.systemui.statusbar.DelegateViewHelper;
+ import com.android.systemui.statusbar.policy.DeadZone;
++import android.os.SystemProperties;
+ import com.android.systemui.statusbar.policy.KeyButtonView;
+ 
+ import java.io.FileDescriptor;
+ import java.io.PrintWriter;
+ import java.util.ArrayList;
++import android.provider.Settings;
+ 
+ public class NavigationBarView extends LinearLayout {
+     final static boolean DEBUG = false;
+@@ -65,7 +67,7 @@ public class NavigationBarView extends LinearLayout {
+     int mBarSize;
+     boolean mVertical;
+     boolean mScreenOn;
+-
++    private String isEnableShowVoiceIcon = SystemProperties.get("ro.rk.systembar.voiceicon","false");
+     boolean mShowMenu;
+     int mDisabledFlags = 0;
+     int mNavigationIconHints = 0;
+@@ -261,6 +263,12 @@ public class NavigationBarView extends LinearLayout {
+     public View getHomeButton() {
+         return mCurrentView.findViewById(R.id.home);
+     }
++	public View getSubButton(){
++        return mCurrentView.findViewById(R.id.sub);
++    }
++	public View getAddButton(){
++        return mCurrentView.findViewById(R.id.add);
++    }		
+ 
+     public View getImeSwitchButton() {
+         return mCurrentView.findViewById(R.id.ime_switcher);
+@@ -360,6 +368,17 @@ public class NavigationBarView extends LinearLayout {
+         getHomeButton()   .setVisibility(disableHome       ? View.INVISIBLE : View.VISIBLE);
+         getRecentsButton().setVisibility(disableRecent     ? View.INVISIBLE : View.VISIBLE);
+ 
++        if ("true".equals(isEnableShowVoiceIcon)){
++                getSubButton().setVisibility(disableHome ? View.INVISIBLE : View.VISIBLE);
++                getAddButton().setVisibility(disableHome ? View.INVISIBLE : View.VISIBLE);
++				/*if((mContext.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) && ((mContext.getResources().getConfiguration().screenHeightDp < 720) || (mContext.getResources().getConfiguration().screenWidthDp < 720))) {
++					getSubButton().setVisibility(View.GONE);
++					getAddButton().setVisibility(View.GONE);}*/
++        } else {
++                getSubButton().setVisibility(View.GONE);
++                getAddButton().setVisibility(View.GONE);
++        }
++
+         mBarTransitions.applyBackButtonQuiescentAlpha(mBarTransitions.getMode(), true /*animate*/);
+     }
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/KeyButtonView.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/KeyButtonView.java
+index 7cc75da..0d27497 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/KeyButtonView.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/KeyButtonView.java
+@@ -49,8 +49,13 @@ import android.view.accessibility.AccessibilityNodeInfo;
+ import android.widget.ImageView;
+ import java.lang.Math;
+ import java.util.ArrayList;
++import android.media.AudioManager;
++import android.os.Handler;
++import android.os.Message;
+ 
+ import com.android.systemui.R;
++import android.provider.Settings;
++import android.content.ContentResolver;
+ 
+ import static android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK;
+ import static android.view.accessibility.AccessibilityNodeInfo.ACTION_LONG_CLICK;
+@@ -71,6 +76,11 @@ public class KeyButtonView extends ImageView {
+     private AudioManager mAudioManager;
+     private Animator mAnimateToQuiescent = new ObjectAnimator();
+ 
++    private static int VOLUME_ADD = 24;
++    private static int VOLUME_SUB = 25;
++    boolean isDown = false;
++    private final int ADJUST_VOLUME_DELAY = 250;	
++
+     private final Runnable mCheckLongPress = new Runnable() {
+         public void run() {
+             if (isPressed()) {
+@@ -178,6 +188,7 @@ public class KeyButtonView extends ImageView {
+         switch (action) {
+             case MotionEvent.ACTION_DOWN:
+                 //Log.d("KeyButtonView", "press");
++				Settings.System.putString(getContext().getContentResolver(), "isVoiceBtn","true");
+                 mDownTime = SystemClock.uptimeMillis();
+                 setPressed(true);
+                 if (mCode != 0) {
+@@ -209,6 +220,7 @@ public class KeyButtonView extends ImageView {
+                 }
+                 break;
+             case MotionEvent.ACTION_UP:
++				Settings.System.putString(getContext().getContentResolver(), "isVoiceBtn","false");
+                 final boolean doIt = isPressed();
+                 setPressed(false);
+                 if (mCode != 0) {
+@@ -243,6 +255,16 @@ public class KeyButtonView extends ImageView {
+     }
+ 
+     void sendEvent(int action, int flags, long when) {
++        if (KeyEvent.ACTION_DOWN == action
++                && (mCode == KeyEvent.KEYCODE_VOLUME_UP
++                || mCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
++            if (mCode == KeyEvent.KEYCODE_VOLUME_UP) {
++                ajustVolume(true);
++            } else {
++                ajustVolume(false);
++            }
++            return;
++    	}
+         final int repeatCount = (flags & KeyEvent.FLAG_LONG_PRESS) != 0 ? 1 : 0;
+         final KeyEvent ev = new KeyEvent(mDownTime, when, action, mCode, repeatCount,
+                 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+@@ -251,6 +273,50 @@ public class KeyButtonView extends ImageView {
+         InputManager.getInstance().injectInputEvent(ev,
+                 InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
+     }
++    
++    public void ajustVolume(boolean opition) {
++		        AudioManager audioManager = (AudioManager) getContext().getSystemService(
++		                Context.AUDIO_SERVICE);
++		        if (audioManager != null) {
++				          //
++				            // Adjust the volume in on key down since it is more
++				            // responsive to the user.
++				            //
++				         if (opition) {
++					           audioManager.adjustSuggestedStreamVolume(
++						       AudioManager.ADJUST_RAISE,
++					           AudioManager.USE_DEFAULT_STREAM_TYPE,
++						       AudioManager.FLAG_SHOW_UI | AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
++						           } else {
++						             audioManager.adjustSuggestedStreamVolume(
++				                     AudioManager.ADJUST_LOWER,
++							         AudioManager.USE_DEFAULT_STREAM_TYPE,
++								     AudioManager.FLAG_SHOW_UI | AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE);
++								          }
++							         }
++								    }
++								
++			   private Handler mAddHandler = new Handler();
++					   private Runnable mAddRun = new Runnable() {
++					          public void run() {
++										      mAddHandler.removeCallbacks(mAddRun);
++										      if (isDown) {
++												       ajustVolume(true);
++												       mAddHandler.postDelayed(mAddRun, ADJUST_VOLUME_DELAY);
++														            }
++														        }
++														    };
++														
++						      private Handler mSubHandler = new Handler();
++							   private Runnable mSubRun = new Runnable() {
++										   public void run() {
++							                     mSubHandler.removeCallbacks(mSubRun);
++																      if (isDown) {
++														          ajustVolume(false);
++													              mSubHandler.postDelayed(mSubRun, ADJUST_VOLUME_DELAY);
++																				            }
++																				        }
++																				    };	
+ }
+ 
+ 
+-- 
+1.9.1
+

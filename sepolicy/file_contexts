@@ -1,0 +1,6 @@
+/dev/mali               u:object_r:gpu_device:s0
+/dev/ump                u:object_r:ump_device:s0
+
+/sys/class/rfkill/rfkill[0-9]*/state -- u:object_r:sysfs_bluetooth_writable:s0
+/sys/class/rfkill/rfkill[0-9]*/type -- u:object_r:sysfs_bluetooth_writable:s0
+

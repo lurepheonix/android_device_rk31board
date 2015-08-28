@@ -1,0 +1,51 @@
+From f75792ae7e152ed6d96f30fcb0b22517d30dcdd9 Mon Sep 17 00:00:00 2001
+From: netlars <netlars@gmx.de>
+Date: Sat, 25 Oct 2014 08:49:42 +0200
+Subject: [PATCH] choose module version itself
+
+Change-Id: I2a7bb355fc67a1af42de9d631247a439ae3b7a4e
+---
+ init/builtins.c | 18 ++++++++++++++++--
+ 1 file changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/init/builtins.c b/init/builtins.c
+index c474198..b08d598 100644
+--- a/init/builtins.c
++++ b/init/builtins.c
+@@ -31,6 +31,7 @@
+ #include <sys/resource.h>
+ #include <sys/wait.h>
+ #include <linux/loop.h>
++#include <sys/utsname.h>
+ #include <cutils/partition_utils.h>
+ #include <cutils/android_reboot.h>
+ #include <fs_mgr.h>
+@@ -134,10 +135,23 @@ static int _chmod(const char *path, mode_t mode)
+ 
+ static int insmod(const char *filename, char *options)
+ {
+-    void *module;
++    void *module = NULL;
+     unsigned size;
+     int ret;
+-
++    struct utsname name;
++    char filename_release[PATH_MAX];
++
++    memset(&name, 0, sizeof(name));
++    ret = uname(&name);
++    if (ret == 0 && name.release) {
++        /* try insmod filename.x.x.x */
++        memset(filename_release, 0, sizeof(filename_release));
++        strncat(filename_release, filename, sizeof(filename_release) - 1);
++        strncat(filename_release, ".", sizeof(filename_release) - 1);
++        strncat(filename_release, name.release, sizeof(filename_release) - 1);
++        module = read_file(filename_release, &size);
++    }
++    if (!module)
+     module = read_file(filename, &size);
+     if (!module)
+         return -1;
+-- 
+1.9.1
+

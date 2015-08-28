@@ -1,0 +1,51 @@
+From f63e45f93651425fcf848dfa5432fbb41196ddbc Mon Sep 17 00:00:00 2001
+From: netlars <netlars@gmx.de>
+Date: Tue, 18 Nov 2014 21:11:04 +0100
+Subject: [PATCH] add libbt-vendor-rtl.so
+
+---
+ hci/src/vendor.c | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/hci/src/vendor.c b/hci/src/vendor.c
+index 4bad100..54136ef 100644
+--- a/hci/src/vendor.c
++++ b/hci/src/vendor.c
+@@ -27,6 +27,25 @@
+ #include "hci.h"
+ #include "osi.h"
+ 
++#include <fcntl.h>
++#define WIFI_CHIP_TYPE_PATH         "/sys/class/rkwifi/chip"
++static int rtk_chip_type(void)
++{
++    static int rtk = -1;
++    if(rtk == -1) {
++        int fd = open(WIFI_CHIP_TYPE_PATH, O_RDONLY);
++        rtk = 0;
++        if(fd >= 0){
++            char name[10] = {0};
++            read(fd, name, sizeof(name));
++            ALOGE("rtk_chip_type %s", name);
++            rtk = !memcmp("RTL8723AU", name, 9);
++            close(fd);
++        }
++    }
++    return rtk;
++}
++
+ // TODO: eliminate these three.
+ extern tHCI_IF *p_hci_if;
+ extern bool fwcfg_acked;
+@@ -62,6 +81,8 @@ static const bt_vendor_callbacks_t vendor_callbacks = {
+ bool vendor_open(const uint8_t *local_bdaddr) {
+   assert(lib_handle == NULL);
+ 
++  if(rtk_chip_type()) VENDOR_LIBRARY_NAME = "libbt-vendor-rtl.so";
++
+   lib_handle = dlopen(VENDOR_LIBRARY_NAME, RTLD_NOW);
+   if (!lib_handle) {
+     ALOGE("%s unable to open %s: %s", __func__, VENDOR_LIBRARY_NAME, dlerror());
+-- 
+1.9.1
+

@@ -1,0 +1,164 @@
+From 3546a9ed6c8884ec2c5f4215ed21c570e676b3f7 Mon Sep 17 00:00:00 2001
+From: netlars <netlars@gmx.de>
+Date: Sat, 25 Oct 2014 15:27:20 +0200
+Subject: [PATCH] fix mount by name MTD partitions
+
+Change-Id: I1127e996172c96f58bf00cb4cc4d3cb0123ebc7f
+---
+ init/devices.c | 58 +++++++++++++++++++++++++++++++++++++++++++++-------------
+ init/util.c    | 21 +++++++++++++++++++++
+ init/util.h    |  1 +
+ 3 files changed, 67 insertions(+), 13 deletions(-)
+
+diff --git a/init/devices.c b/init/devices.c
+index 8b00bf2..1c618f1 100644
+--- a/init/devices.c
++++ b/init/devices.c
+@@ -491,7 +491,7 @@ err:
+     return NULL;
+ }
+ 
+-static char **get_block_device_symlinks(struct uevent *uevent)
++static char **parse_platform_block_device(struct uevent *uevent)
+ {
+     const char *device;
+     struct platform_node *pdev;
+@@ -508,24 +508,18 @@ static char **get_block_device_symlinks(struct uevent *uevent)
+     struct stat info;
+ 
+     pdev = find_platform_device(uevent->path);
+-    if (pdev) {
+-        device = pdev->name;
+-        type = "platform";
+-    } else if (!find_pci_device_prefix(uevent->path, buf, sizeof(buf))) {
+-        device = buf;
+-        type = "pci";
+-    } else {
++    if (!pdev)
+         return NULL;
+-    }
++    device = pdev->name;
+ 
+     char **links = malloc(sizeof(char *) * 4);
+     if (!links)
+         return NULL;
+     memset(links, 0, sizeof(char *) * 4);
+ 
+-    INFO("found %s device %s\n", type, device);
++    INFO("found platform device %s\n", device);
+ 
+-    snprintf(link_path, sizeof(link_path), "/dev/block/%s/%s", type, device);
++    snprintf(link_path, sizeof(link_path), "/dev/block/platform/%s", device);
+ 
+     if (uevent->partition_name) {
+         p = strdup(uevent->partition_name);
+@@ -536,6 +530,12 @@ static char **get_block_device_symlinks(struct uevent *uevent)
+             link_num++;
+         else
+             links[link_num] = NULL;
++
++		if (asprintf(&links[link_num], "/dev/block/mtd/by-name/%s", p) > 0)
++			link_num++;
++		else
++			links[link_num] = NULL;
++
+         free(p);
+     }
+ 
+@@ -555,6 +555,36 @@ static char **get_block_device_symlinks(struct uevent *uevent)
+     return links;
+ }
+ 
++static char **parse_mtd_block_device(struct uevent *uevent)
++{
++    int partition_num;
++    const char *partition_name;
++    char *p;
++
++    char **links = malloc(sizeof(char *) * 2);
++    if (!links)
++        return NULL;
++    memset(links, 0, sizeof(char *) * 2);
++
++    partition_num = atoi(strstr(uevent->path, "/mtdblock") + 9);
++    partition_name = mtd_number_to_name(partition_num);
++    if (!partition_name)
++        goto err;
++
++    p = strdup(partition_name);
++    if (!p)
++        goto err;
++    sanitize(p);
++    asprintf(&links[0], "/dev/block/mtd/by-name/%s", p);
++    free(p);
++
++    return links;
++
++err:
++    free(links);
++    return NULL;
++}
++
+ static void handle_device(const char *action, const char *devpath,
+         const char *path, int block, int major, int minor, char **links)
+ {
+@@ -631,8 +661,10 @@ static void handle_block_device_event(struct uevent *uevent)
+     snprintf(devpath, sizeof(devpath), "%s%s", base, name);
+     make_dir(base, 0755);
+ 
+-    if (!strncmp(uevent->path, "/devices/", 9))
+-        links = get_block_device_symlinks(uevent);
++    if (!strncmp(uevent->path, "/devices/platform/", 18))
++        links = parse_platform_block_device(uevent);
++    else if (strstr(uevent->path, "/mtdblock"))
++        links = parse_mtd_block_device(uevent);
+ 
+     handle_device(uevent->action, devpath, uevent->path, 1,
+             uevent->major, uevent->minor, links);
+diff --git a/init/util.c b/init/util.c
+index e1a3ee3..847b554 100644
+--- a/init/util.c
++++ b/init/util.c
+@@ -262,6 +262,27 @@ int mtd_name_to_number(const char *name)
+     return -1;
+ }
+ 
++const char *mtd_number_to_name(int number)
++{
++    int n;
++    if (mtd_part_count < 0) {
++        mtd_part_count = 0;
++        find_mtd_partitions();
++    }
++    for (n = 0; n < mtd_part_count; n++) {
++        if (number == mtd_part_map[n].number) {
++            return mtd_part_map[n].name;
++        }
++    }
++    mtd_part_count = 0;
++    find_mtd_partitions();
++    for (n = 0; n < mtd_part_count; n++) {
++        if (number == mtd_part_map[n].number) {
++            return mtd_part_map[n].name;
++        }
++    }
++    return NULL;
++}
+ /*
+  * gettime() - returns the time in seconds of the system's monotonic clock or
+  * zero on error.
+diff --git a/init/util.h b/init/util.h
+index 04b8129..8c35c27 100644
+--- a/init/util.h
++++ b/init/util.h
+@@ -25,6 +25,7 @@
+ static const char *coldboot_done = "/dev/.coldboot_done";
+ 
+ int mtd_name_to_number(const char *name);
++const char *mtd_number_to_name(int number);
+ int create_socket(const char *name, int type, mode_t perm,
+                   uid_t uid, gid_t gid, const char *socketcon);
+ void *read_file(const char *fn, unsigned *_sz);
+-- 
+1.9.1
+

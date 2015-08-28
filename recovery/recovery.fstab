@@ -1,0 +1,11 @@
+/misc		mtd		misc
+/kernel		mtd		kernel	flags=backup=1;display=kernel
+/boot		mtd		boot
+/recovery	mtd		recovery	flags=backup=1;display=recovery
+/cache		ext4		/dev/block/mtdblock6	flags=backup=0
+/data		ext4		/dev/block/mtdblock7
+/system		ext4		/dev/block/mtdblock9
+/sdcard		vfat		/dev/block/mtdblock10	flags=backup=1;wipeingui;storage
+/external_sd	vfat	/dev/block/mmcblk0p1	/dev/block/mmcblk0	flags=wipeingui;storage;removable
+/sd-ext		auto		/dev/block/mmcblk0p2
+/usb-otg	vfat		/dev/block/sda	/dev/block/sda1		flags=display="USB Storage";storage;wipeingui;removable

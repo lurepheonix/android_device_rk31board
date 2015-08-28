@@ -1,0 +1,67 @@
+From dc993a851103fb9a08a45c5b52b46450499390db Mon Sep 17 00:00:00 2001
+From: netlars <netlars@gmx.de>
+Date: Wed, 19 Nov 2014 19:20:31 +0100
+Subject: [PATCH] add HDMI Settings
+
+---
+ res/drawable/ic_settings_hdmi.png | Bin 0 -> 422 bytes
+ res/values/strings.xml            |   3 +++
+ res/xml/dashboard_categories.xml  |  11 +++++++++++
+ 3 files changed, 14 insertions(+)
+ create mode 100644 res/drawable/ic_settings_hdmi.png
+
+diff --git a/res/drawable/ic_settings_hdmi.png b/res/drawable/ic_settings_hdmi.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..2924a4fca092bc1a4039d53609d3269453a0b904
+GIT binary patch
+literal 422
+zcmeAS@N?(olHy`uVBq!ia0vp^3LwnE1|*BCs=fdzwj^(N7l!{JxM1({$v_d#0*}aI
+z1_o|n5N2eUHAey{$X?><>&kwQTUbbgnJa7BL<R;%V^0^ykch)?!vpyaDe&Y<rd{N&
+zP~m^f`Q<Rb{T1#PvU?lc7O$3{#wy5mB0+v~OG;vF^sjqzteqTfGE8i8LADBut{w<h
+z+}e07^}%Q9=teGvDef!`k5;Y^-RsoQ@k?)>j7!l2R{uw)Dbk;<x7UYuUHh@){P9yy
+zxq=lvq|EF@eGjmm+@W=0C9|%if4lzTvp=QYR#?wx3w5-p+nyt1@R-AP^PT5Rg1%=g
+ztk^d&JUP^})Y*Y`(vH2(ijj&5o^RjEmxna05m+K*&}Q!^B-XINaI&fAjNP`gN+%g?
+z=VLg~TH3Jbg~JK9GZyl?Gqo9~uUV#&^_HE>p&_m3(sISW(n9sYul{*_s9|t8yKCRG
+za_d~*O%F^I>ym{w#JXg?ov<-3q^9nve$cAk-Op=(>`mA*{qjNK3dZDxof8i4j0pgS
+OD1)b~pUXO@geCw*)uA*1
+
+literal 0
+HcmV?d00001
+
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index 0a139d5..c859b98 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -5979,4 +5979,7 @@
+    <!-- Message for encryption dialog telling the user that Talkback and other accessibility services will be disabled. -->
+    <string name="encrypt_talkback_dialog_message_password">When you enter your password to start this device, accessibility services like <xliff:g id="service" example="TalkBack">%1$s</xliff:g> won\'t yet be available.</string>
+ 
++   <!-- HDMI -->
++   <string name="hdmi_settings">Hdmi</string>
++
+ </resources>
+diff --git a/res/xml/dashboard_categories.xml b/res/xml/dashboard_categories.xml
+index 01a4f83..73829a7 100644
+--- a/res/xml/dashboard_categories.xml
++++ b/res/xml/dashboard_categories.xml
+@@ -92,6 +92,17 @@
+                 android:icon="@drawable/ic_settings_display"
+                 />
+ 
++        <!-- HDMI -->
++        <dashboard-tile
++                android:title="@string/hdmi_settings"
++                android:icon="@drawable/ic_settings_hdmi" >
++                <intent 
++                   android:action="android.intent.action.MAIN" 
++                   android:targetClass="com.jucaroba.hdmirk.HdmiRK"
++                   android:targetPackage="com.jucaroba.hdmirk" />
++        </dashboard-tile>
++
++
+         <!-- Notifications -->
+         <dashboard-tile
+                 android:id="@+id/notification_settings"
+-- 
+1.9.1
+

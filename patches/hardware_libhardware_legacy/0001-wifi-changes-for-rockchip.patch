@@ -1,0 +1,721 @@
+From df05abdeda14c5b4684b403ebc4b83de31d41d2b Mon Sep 17 00:00:00 2001
+From: netlars <netlars@gmx.de>
+Date: Sat, 25 Oct 2014 19:27:30 +0200
+Subject: [PATCH] wifi changes for rockchip
+
+Change-Id: I3ac407230a6ecf0e9a8daa3d4a8c8241c77ad8c5
+---
+ include/hardware_legacy/wifi.h |  29 +++
+ wifi/wifi.c                    | 563 ++++++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 585 insertions(+), 7 deletions(-)
+
+diff --git a/include/hardware_legacy/wifi.h b/include/hardware_legacy/wifi.h
+index 7a64d52..6585677 100644
+--- a/include/hardware_legacy/wifi.h
++++ b/include/hardware_legacy/wifi.h
+@@ -21,6 +21,35 @@
+ extern "C" {
+ #endif
+ 
++enum WIFI_CHIP_TYPE_LIST{
++    RTL8188CU = 0,
++    RTL8188EU,
++    RTL8192CU,
++    RTL8192DU,
++    RTL8189ES,
++    RTL8723AS,
++    RTL8723AU,
++    RT3070,
++    BCM4329,
++    BCM4319,
++    BCM43x9,
++    BCM4330,
++    RK901,
++    RK903,
++    OOB_RK901,
++    OOB_RK903,
++    RT5370,
++    RT5370V2,
++    MT5931,
++    MT6620,
++    MT7601,
++    ESP8089,
++    AP6330,
++    NUM_MAX,
++};
++
++int check_wifi_chip_type(void);
++
+ /**
+  * Load the Wi-Fi driver.
+  *
+diff --git a/wifi/wifi.c b/wifi/wifi.c
+index 87be8d8..edfceb2 100644
+--- a/wifi/wifi.c
++++ b/wifi/wifi.c
+@@ -22,6 +22,7 @@
+ #include <sys/socket.h>
+ #include <unistd.h>
+ #include <poll.h>
++#include <sys/utsname.h>
+ 
+ #include "hardware_legacy/wifi.h"
+ #ifdef LIBWPA_CLIENT_EXISTS
+@@ -74,9 +75,24 @@ static char primary_iface[PROPERTY_VALUE_MAX];
+ // TODO: use new ANDROID_SOCKET mechanism, once support for multiple
+ // sockets is in
+ 
++#ifdef MT7601U
++/* mtk 7601  usb wifi */
++#undef WIFI_DRIVER_MODULE_PATH
++#define WIFI_DRIVER_MODULE_PATH         "/system/lib/modules/mt7601sta.ko"
++#undef WIFI_DRIVER_MODULE_NAME
++#define WIFI_DRIVER_MODULE_NAME         "mt7601Usta"
++#undef WIFI_AP_DRIVER_MODULE_PATH
++#define WIFI_AP_DRIVER_MODULE_PATH         "/system/lib/modules/mt7601ap.ko"
++#undef WIFI_AP_DRIVER_MODULE_NAME
++#define WIFI_AP_DRIVER_MODULE_NAME         "mt7601Uap"
++#endif
++
+ #ifndef WIFI_DRIVER_MODULE_ARG
+ #define WIFI_DRIVER_MODULE_ARG          ""
+ #endif
++#ifndef WIFI_DRIVER_MODULE_AP_ARG
++#define WIFI_DRIVER_MODULE_AP_ARG       ""
++#endif
+ #ifndef WIFI_FIRMWARE_LOADER
+ #define WIFI_FIRMWARE_LOADER		""
+ #endif
+@@ -92,19 +108,48 @@ static char primary_iface[PROPERTY_VALUE_MAX];
+ #define WIFI_DRIVER_FW_PATH_P2P		NULL
+ #endif
+ 
++#ifdef MT7601U
++#undef WIFI_DRIVER_FW_PATH_STA
++#define WIFI_DRIVER_FW_PATH_STA         "STA"
++#undef WIFI_DRIVER_FW_PATH_AP
++#define WIFI_DRIVER_FW_PATH_AP          "AP"
++#undef WIFI_DRIVER_FW_PATH_P2P
++#define WIFI_DRIVER_FW_PATH_P2P         "P2P"
++#endif 
++
+ #ifndef WIFI_DRIVER_FW_PATH_PARAM
+-#define WIFI_DRIVER_FW_PATH_PARAM	"/sys/module/wlan/parameters/fwpath"
++#define WIFI_DRIVER_FW_PATH_PARAM	"/sys/module/wlan/parameters/firmware_path"
+ #endif
+ 
+ #define WIFI_DRIVER_LOADER_DELAY	1000000
+ 
+ static const char IFACE_DIR[]           = "/data/system/wpa_supplicant";
++
++#ifndef WIFI_DRIVER_MODULE_NAME
++#define WIFI_DRIVER_MODULE_NAME    "wlan" 
++#endif
++
++#ifndef WIFI_DRIVER_MODULE_PATH
++#define WIFI_DRIVER_MODULE_PATH    "/system/lib/modules/wlan.ko"
++#endif
++
++#ifndef WIFI_AP_DRIVER_MODULE_PATH
++#define WIFI_AP_DRIVER_MODULE_PATH    "/system/lib/modules/rt5370ap.ko"
++#define WIFI_AP_DRIVER_MODULE_NAME   "RT5370AP"
++//static const char AP_DRIVER_MODULE_PATH[]  = WIFI_AP_DRIVER_MODULE_PATH;
++#endif
++
+ #ifdef WIFI_DRIVER_MODULE_PATH
+ static const char DRIVER_MODULE_NAME[]  = WIFI_DRIVER_MODULE_NAME;
+ static const char DRIVER_MODULE_TAG[]   = WIFI_DRIVER_MODULE_NAME " ";
+ static const char DRIVER_MODULE_PATH[]  = WIFI_DRIVER_MODULE_PATH;
+ static const char DRIVER_MODULE_ARG[]   = WIFI_DRIVER_MODULE_ARG;
+ #endif
++#ifdef WIFI_AP_DRIVER_MODULE_PATH
++static const char AP_DRIVER_MODULE_NAME[]  = WIFI_AP_DRIVER_MODULE_NAME;
++static const char AP_DRIVER_MODULE_TAG[]   = WIFI_AP_DRIVER_MODULE_NAME " ";
++static const char AP_DRIVER_MODULE_PATH[]  = WIFI_AP_DRIVER_MODULE_PATH;
++#endif
+ static const char FIRMWARE_LOADER[]     = WIFI_FIRMWARE_LOADER;
+ static const char DRIVER_PROP_NAME[]    = "wlan.driver.status";
+ static const char SUPPLICANT_NAME[]     = "wpa_supplicant";
+@@ -116,6 +161,7 @@ static const char SUPP_CONFIG_FILE[]    = "/data/misc/wifi/wpa_supplicant.conf";
+ static const char P2P_CONFIG_FILE[]     = "/data/misc/wifi/p2p_supplicant.conf";
+ static const char CONTROL_IFACE_PATH[]  = "/data/misc/wifi/sockets";
+ static const char MODULE_FILE[]         = "/proc/modules";
++static const char VENDOR_PROP_NAME[]    = "wifi.chip.type";
+ 
+ static const char IFNAME[]              = "IFNAME=";
+ #define IFNAMELEN			(sizeof(IFNAME) - 1)
+@@ -132,13 +178,222 @@ static char supplicant_name[PROPERTY_VALUE_MAX];
+ /* Is either SUPP_PROP_NAME or P2P_PROP_NAME */
+ static char supplicant_prop_name[PROPERTY_KEY_MAX];
+ 
++static int WIFI_CHIP_TYPE;
++
++#define WIFI_CHIP_TYPE_PATH         "/sys/class/rkwifi/chip"
++#define WIFI_CHIP_AIDC_PATH         "/sys/class/rkwifi/aidc"
++#define WIFI_TYPE_PATH              "/data/misc/wifi/wifi_chip_type"
++
++static int save_wifi_type(char *buf)
++{
++    int fd;
++
++	if (strlen(buf) == 0)
++		return -1;
++
++    fd = open(WIFI_TYPE_PATH, O_CREAT | O_TRUNC | O_WRONLY, 0660);
++    if (fd < 0) {
++        ALOGE("Cannot creat\"%s\": %s", WIFI_TYPE_PATH, strerror(errno));
++        return -1;
++    }
++    if (write(fd, buf, strlen(buf)) < 0) {
++        ALOGE("Cannot write to \"%s\": %s", WIFI_TYPE_PATH, strerror(errno));
++        return -1;
++    }
++    close(fd);
++
++    /* Note: apparently open can fail to set permissions correctly at times */
++    if (chmod(WIFI_TYPE_PATH, 0660) < 0) {
++        ALOGE("Error changing permissions of %s to 0440: %s",
++                WIFI_TYPE_PATH, strerror(errno));
++        unlink(WIFI_TYPE_PATH);
++        return -1;
++    }
++    if (chown(WIFI_TYPE_PATH, AID_SYSTEM, AID_WIFI) < 0) {
++        ALOGE("Error changing group ownership of %s to %d: %s",
++                WIFI_TYPE_PATH, AID_WIFI, strerror(errno));
++        unlink(WIFI_TYPE_PATH);
++        return -1;
++    }
++
++    return 1;
++}
++
++// get wifi chip type, because different chip need different hostapd.
++int check_wifi_chip_type(void)
++{
++    int wififd;
++    char buf[64];
++	static int wifi_chip_type = RK903;
++
++	if (access(WIFI_CHIP_AIDC_PATH, F_OK) >= 0) {
++		if (access(WIFI_TYPE_PATH, F_OK) < 0) {
++			wififd = open(WIFI_CHIP_AIDC_PATH, O_RDONLY);
++            if(wififd < 0){
++                ALOGD("Can't open %s, errno = %d", WIFI_CHIP_AIDC_PATH, errno);
++                goto done;
++            }
++            memset(buf, 0, 64);
++
++            if( 0 == read(wififd, buf, 10) ){
++                ALOGD("read %s failed", WIFI_CHIP_AIDC_PATH);
++                close(wififd);
++                goto done;
++            }
++            close(wififd);
++            if (0 == strncmp(buf, "UNKNOW", strlen("UNKNOW"))){
++                ALOGD("Unknowed wifi chip type......");
++                goto done;
++            } else {
++                save_wifi_type(buf);
++            }
++		}
++    	wififd = open(WIFI_TYPE_PATH, O_RDONLY);
++    	if( wififd < 0 ){
++        	ALOGD("Can't open %s, errno = %d", WIFI_TYPE_PATH, errno);
++        	goto done;
++    	}
++	} else {
++		wififd = open(WIFI_CHIP_TYPE_PATH, O_RDONLY);
++        if( wififd < 0 ){
++            ALOGD("Can't open %s, errno = %d", WIFI_CHIP_TYPE_PATH, errno);
++            goto done;
++        }
++	}
++
++    memset(buf, 0, 64);
++
++    if( 0 == read(wififd, buf, 10) ){
++        ALOGD("read failed");
++        close(wififd);
++		unlink(WIFI_TYPE_PATH);
++        goto done;
++    }
++    close(wififd);
++
++    if(0 == strncmp(buf, "RTL8188CU", strlen("RTL8188CU")) )
++    {
++        wifi_chip_type = RTL8188CU;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RTL8188CU");
++    }
++    if(0 == strncmp(buf, "RTL8188EU", strlen("RTL8188EU")) )
++    {
++        wifi_chip_type = RTL8188EU;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RTL8188EU");
++    }
++    else if (0 == strncmp(buf, "BCM4329", strlen("BCM4329")) )
++    {
++        wifi_chip_type = BCM4329;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = BCM4329");
++    }
++    else if (0 == strncmp(buf, "BCM4330", strlen("BCM4330")) )
++    {
++        wifi_chip_type = BCM4330;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = BCM4330");
++    }
++    else if (0 == strncmp(buf, "RK901", strlen("RK901")) )
++    {
++        wifi_chip_type = RK901;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RK901");
++    }
++    else if (0 == strncmp(buf, "RK903", strlen("RK903")) )
++    {
++        wifi_chip_type = RK903;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RK903");
++    }
++    else if (0 == strncmp(buf, "OOB_RK901", strlen("OOB_RK901")) )
++    {
++        wifi_chip_type = OOB_RK901;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RK901(OOB)");
++    }
++    else if (0 == strncmp(buf, "OOB_RK903", strlen("OOB_RK903")) )
++    {
++        wifi_chip_type = OOB_RK903;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RK903(OOB)");
++    }
++    else if (0 == strncmp(buf, "RT5370", strlen("RT5370")) )
++    {
++        wifi_chip_type = RT5370;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RT5370");
++    }
++    else if (0 == strncmp(buf, "RT5370V2", strlen("RT5370V2")) )
++    {
++        wifi_chip_type = RT5370V2;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RT5370V2");
++    }
++    else if (0 == strncmp(buf, "RTL8723AU", strlen("RTL8723AU")) )
++    {
++        wifi_chip_type = RTL8723AU;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RTL8723AU");
++    }
++    else if (0 == strncmp(buf, "RTL8723AS", strlen("RTL8723AS")) )
++    {
++        wifi_chip_type = RTL8723AS;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RTL8723AS");
++    }
++    else if (0 == strncmp(buf, "RTL8189ES", strlen("RTL8189ES")) )
++    {
++        wifi_chip_type = RTL8189ES;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = RTL8189ES");
++    }
++    else if (0 == strncmp(buf, "MT5931", strlen("MT5931")) )
++    {
++        wifi_chip_type = MT5931;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = MT5931");
++    }
++    else if (0 == strncmp(buf, "MT6620", strlen("MT6620")) )
++    {
++        wifi_chip_type = MT6620;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = MT6620");
++    }
++	else if (0 == strncmp(buf, "MT7601", strlen("MT7601")) )
++    {
++        wifi_chip_type = MT7601;
++        ALOGD("Read wifi chip type OK ! wifi_chip_type = MT7601");
++    }
++    else if (0 == strncmp(buf, "ESP8089", strlen("ESP8089")) )
++    {
++        wifi_chip_type = ESP8089;
++        property_set(VENDOR_PROP_NAME,"esp8089");
++		ALOGD("Read wifi chip type OK ! wifi_chip_type = ESP8089");
++    }
++
++	
++
++done:
++    return wifi_chip_type;
++}
++
++static int is_primary_interface(const char *ifname)
++{
++    //Treat NULL as primary interface to allow control
++    //on STA without an interface
++    if (ifname == NULL || !strncmp(ifname, primary_iface, strlen(primary_iface))) {
++        return 1;
++    }
++    return 0;
++}
++
+ static int insmod(const char *filename, const char *args)
+ {
+-    void *module;
++    void *module = NULL;
+     unsigned int size;
+     int ret;
+-
+-    module = load_file(filename, &size);
++    struct utsname name;
++    char filename_release[PATH_MAX];
++
++    memset(&name, 0, sizeof(name));
++    ret = uname(&name);
++    if (ret == 0 && name.release) {
++        /* try insmod filename.x.x.x */
++        memset(filename_release, 0, sizeof(filename_release));
++        strncat(filename_release, filename, sizeof(filename_release) - 1);
++        strncat(filename_release, ".", sizeof(filename_release) - 1);
++        strncat(filename_release, name.release, sizeof(filename_release) - 1);
++        module = load_file(filename_release, &size);
++    }
++    if (!module)
++        module = load_file(filename, &size);
+     if (!module)
+         return -1;
+ 
+@@ -227,18 +482,120 @@ int is_wifi_driver_loaded() {
+ #endif
+ }
+ 
++/* 0 - not ready; 1 - ready. */
++static int check_wireless_ready(void)
++{
++	int timeout = 150; /* wait at most 15 seconds for completion */
++	char line[1024], *ptr = NULL;
++	FILE *fp = NULL;
++	
++	while (timeout-- > 0) {
++		fp = fopen("/proc/net/wireless", "r");
++		if (fp == NULL) {
++			ALOGE("Couldn't open /proc/net/wireless\n");
++			timeout = 0;
++			break;
++		}
++		
++		fgets(line, 1024, fp);
++		fgets(line, 1024, fp);
++		ptr = fgets(line, 1024, fp);
++		fclose(fp);
++		
++		if ((ptr != NULL) && ((strstr(line, "p2p0:") != NULL) || 
++			(strstr(line, "wlan0:") != NULL)))
++			break;
++		usleep(100000);
++	}
++	
++	if (timeout <= 0) {
++		ALOGE("Timeout to wait for Wifi interface within 15 seconds.\n");
++		//property_set(DRIVER_PROP_NAME, "failed");
++		return 0;
++	}
++	else {
++		ALOGD("Wifi driver is ready for now. timeout=%d\n", timeout);
++		//property_set(DRIVER_PROP_NAME, "ok");
++		return 1;
++	}
++}
++
+ int wifi_load_driver()
+ {
+ #ifdef WIFI_DRIVER_MODULE_PATH
+     char driver_status[PROPERTY_VALUE_MAX];
+     int count = 100; /* wait at most 20 seconds for completion */
+-
++    int type;
++    char path[64], arg[64]={0};
++   
+     if (is_wifi_driver_loaded()) {
+         return 0;
+     }
+ 
+-    if (insmod(DRIVER_MODULE_PATH, DRIVER_MODULE_ARG) < 0)
++#ifdef WIFI_EXT_MODULE_PATH
++    if (insmod(EXT_MODULE_PATH, EXT_MODULE_ARG) < 0)
+         return -1;
++    usleep(200000);
++#endif
++
++    strcpy(path, DRIVER_MODULE_PATH);
++    strcpy(arg, DRIVER_MODULE_ARG);
++    WIFI_CHIP_TYPE = type = check_wifi_chip_type();
++    if((type == RK901) || (type == RK903) || (type == BCM4330)) {
++                strcpy(path, "/system/lib/modules/rkwifi.ko");
++    } else if ((type == OOB_RK901) || (type == OOB_RK903)) {
++		strcpy(path, "/system/lib/modules/rkwifi.oob.ko");
++    } else if (type == RTL8188CU) {
++		strcpy(path, "/system/lib/modules/8192cu.ko");
++		strcpy(arg, "ifname=wlan0 if2name=p2p0");
++    } else if (type == RTL8188EU) {
++		strcpy(path, "/system/lib/modules/8188eu.ko");
++		strcpy(arg, "ifname=wlan0 if2name=p2p0");
++    } else if (type == RTL8723AU) {
++		strcpy(path, "/system/lib/modules/8723au.ko");
++		strcpy(arg, "ifname=wlan0 if2name=p2p0");
++    }else if (type == RTL8723AS) {
++                strcpy(path, "/system/lib/modules/8723as.ko");
++                strcpy(arg, "ifname=wlan0 if2name=p2p0");
++    }else if (type == RTL8189ES) {
++		strcpy(path, "/system/lib/modules/8189es.ko");
++		strcpy(arg, "ifname=wlan0 if2name=p2p0");
++    } else if (type == RT5370) {
++	        strcpy(path, "/system/lib/modules/rt5370sta.ko");
++    } else if (type == RT5370V2) {
++	        strcpy(path, "/system/lib/modules/rt5370v2.ko");
++    } else if (type == MT7601){
++		ALOGD("wifi_load_driver: type =  MT7601 ");
++		strcpy(path, "/system/lib/modules/mt7601sta.ko");
++    }else if (type == ESP8089){
++		strcpy(path, "/system/lib/modules/esp8089.ko");
++   		property_set(VENDOR_PROP_NAME, "esp8089");
++    }
++    else if (type == MT5931) {
++		strcpy(path, "/system/lib/modules/mt5931.ko");
++    }
++    else if (type == MT6620) {
++		strcpy(path, "/system/lib/modules/mt6620.ko");
++    }
++    else if (type == RT5370V2) {
++		strcpy(path, "/system/lib/modules/rt5370v2.ko");
++    }
++    else if (type == AP6330) {
++		strcpy(path, "/system/lib/modules/ap6330.ko");
++    }
++	// judge if the KO file exist, if not, insmod wlan.ko
++    if (access(path, F_OK) < 0) {
++        ALOGD("DRIVER_MODULE_PATH = %s (Not such file)...", path);
++        strcpy(path, DRIVER_MODULE_PATH);
++    }
++
++    ALOGD("%s: DRIVER_MODULE_PATH = %s, DRIVER_MODULE_ARG = %s", __FUNCTION__, path, arg);
++
++    if (insmod(path, arg) < 0) {
++        ALOGD("%s: driver load failed", __FUNCTION__);
++        wifi_unload_driver();
++        return -1;
++    }
+ 
+     if (strcmp(FIRMWARE_LOADER,"") == 0) {
+         /* usleep(WIFI_DRIVER_LOADER_DELAY); */
+@@ -247,6 +604,69 @@ int wifi_load_driver()
+     else {
+         property_set("ctl.start", FIRMWARE_LOADER);
+     }
++#if 0    
++    sched_yield();
++    while (count-- > 0) {
++        if (property_get(DRIVER_PROP_NAME, driver_status, NULL)) {
++            if (strcmp(driver_status, "ok") == 0)
++                return 0;
++            else if (strcmp(DRIVER_PROP_NAME, "failed") == 0) {
++                wifi_unload_driver();
++                return -1;
++            }
++        }
++        usleep(200000);
++    }
++#else    
++    if (check_wireless_ready() == 1) {
++        property_set(DRIVER_PROP_NAME, "ok");
++        return 0;
++    }    
++#endif    
++    property_set(DRIVER_PROP_NAME, "timeout");
++    wifi_unload_driver();
++    return -1;
++#else
++    property_set(DRIVER_PROP_NAME, "ok");
++    return 0;
++#endif
++}
++
++int rt5370_load_ap_driver()
++{
++#ifdef WIFI_AP_DRIVER_MODULE_PATH
++    char driver_status[PROPERTY_VALUE_MAX];
++    int count = 100; /* wait at most 20 seconds for completion */
++    int type;
++    char path[64];
++
++    if (is_wifi_driver_loaded())
++	wifi_unload_driver();
++
++    strcpy(path, AP_DRIVER_MODULE_PATH);
++    if (access(path, F_OK) < 0) {
++        ALOGD("DRIVER_MODULE_PATH = %s (Not such file)...", path);
++        strcpy(path, DRIVER_MODULE_PATH);
++    }
++
++    ALOGD("%s: DRIVER_MODULE_PATH = %s, DRIVER_MODULE_ARG = %s", __FUNCTION__, path, DRIVER_MODULE_ARG);
++
++    if (insmod(path, DRIVER_MODULE_ARG) < 0) {
++        ALOGD("%s: driver load failed", __FUNCTION__);
++        wifi_unload_driver();
++        return -1;
++    }
++
++    if (strcmp(FIRMWARE_LOADER,"") == 0) {
++#ifdef WIFI_DRIVER_LOADER_DELAY
++        /*usleep(WIFI_DRIVER_LOADER_DELAY);*/
++#endif
++        property_set(DRIVER_PROP_NAME, "ok");
++    }
++    else {
++        property_set("ctl.start", FIRMWARE_LOADER);
++    }
++#if 1
+     sched_yield();
+     while (count-- > 0) {
+         if (property_get(DRIVER_PROP_NAME, driver_status, NULL)) {
+@@ -259,6 +679,12 @@ int wifi_load_driver()
+         }
+         usleep(200000);
+     }
++#else
++    if (check_wireless_ready() == 1) {
++        property_set(DRIVER_PROP_NAME, "ok");
++        return 0;
++    }
++#endif
+     property_set(DRIVER_PROP_NAME, "timeout");
+     wifi_unload_driver();
+     return -1;
+@@ -285,7 +711,130 @@ int wifi_unload_driver()
+         }
+         return -1;
+     } else
++       return 0;// return -1;
++#else
++    property_set(DRIVER_PROP_NAME, "unloaded");
++    return 0;
++#endif
++}
++
++int is_wifi_ap_driver_loaded() {
++    char driver_status[PROPERTY_VALUE_MAX];
++#ifdef WIFI_AP_DRIVER_MODULE_PATH
++    FILE *proc;
++    char line[sizeof(AP_DRIVER_MODULE_TAG)+10];
++#endif
++
++    if (!property_get(DRIVER_PROP_NAME, driver_status, NULL)
++            || strcmp(driver_status, "ok") != 0) {
++        return 0;  /* driver not loaded */
++    }
++#ifdef WIFI_AP_DRIVER_MODULE_PATH
++    /*
++     * If the property says the driver is loaded, check to
++     * make sure that the property setting isn't just left
++     * over from a previous manual shutdown or a runtime
++     * crash.
++     */
++    if ((proc = fopen(MODULE_FILE, "r")) == NULL) {
++        ALOGW("Could not open %s: %s", MODULE_FILE, strerror(errno));
++        property_set(DRIVER_PROP_NAME, "unloaded");
++        return 0;
++    }
++    while ((fgets(line, sizeof(line), proc)) != NULL) {
++        if (strncmp(line, AP_DRIVER_MODULE_TAG, strlen(AP_DRIVER_MODULE_TAG)) == 0) {
++            fclose(proc);
++            return 1;
++        }
++    }
++    fclose(proc);
++    property_set(DRIVER_PROP_NAME, "unloaded");
++    return 0;
++#else
++    return 1;
++#endif
++}
++
++int wifi_load_ap_driver()
++{
++#ifdef WIFI_AP_DRIVER_MODULE_PATH
++    char driver_status[PROPERTY_VALUE_MAX];
++    char supp_status[PROPERTY_VALUE_MAX] = {'\0'};
++    int count = 100; /* wait at most 20 seconds for completion */
++
++	#ifdef MT7601U
++	system("cp /etc/fiwmware/RT2870AP.dat /data/misc/wifi/ &");
++	system("cp /etc/fiwmware/RT2870APCard.dat /data/misc/wifi/ &");
++	#endif
++
++    if (property_get(SUPP_PROP_NAME, supp_status, NULL)
++            && strcmp(supp_status, "stopping") == 0) {
++        ALOGD("supplicant status is stopping, try to stop supplicant...");    	
++        wifi_stop_supplicant(1);// wifi on/off test will lead to unblocking problem
++        property_get(SUPP_PROP_NAME, supp_status, NULL);
++        ALOGD("supplicant status = %s", supp_status);    	
++    } 
++
++	//wifi_unload_driver();//by lt
++    if (is_wifi_ap_driver_loaded()) {
++        return 0;
++    }
++   	 
++	ALOGE("begin to insmod %s %s firmware!", AP_DRIVER_MODULE_PATH, "");
++    if (insmod(AP_DRIVER_MODULE_PATH, "") < 0) {
++        ALOGE("insmod %s %s firmware failed!", AP_DRIVER_MODULE_PATH, "");
++        rmmod(AP_DRIVER_MODULE_NAME);//it may be load driver already,try remove it.
+         return -1;
++    }
++
++	if (strcmp(FIRMWARE_LOADER,"") == 0) {
++		property_set(DRIVER_PROP_NAME, "ok");
++    }
++    else {
++        property_set("ctl.start", FIRMWARE_LOADER);
++    }
++
++    sched_yield();
++    while (count-- > 0) {
++        if (property_get(DRIVER_PROP_NAME, driver_status, NULL)) {
++            if (strcmp(driver_status, "ok") == 0)
++                return 0;
++            else if (strcmp(DRIVER_PROP_NAME, "failed") == 0) {
++                wifi_unload_driver();
++                return -1;
++            }
++        }
++        usleep(200000);
++    }
++    property_set(DRIVER_PROP_NAME, "timeout");
++    wifi_unload_driver();
++    return -1;
++#else
++    property_set(DRIVER_PROP_NAME, "ok");
++    return 0;
++#endif
++}
++
++int wifi_unload_ap_driver()
++{
++	ALOGD("wifi unload driver.\n");
++    usleep(200000); /* allow to finish interface down */
++#ifdef WIFI_AP_DRIVER_MODULE_PATH
++    if (rmmod(AP_DRIVER_MODULE_NAME) == 0) 
++	{    	
++        int count = 20; /* wait at most 10 seconds for completion */
++        while (count-- > 0) {
++            if (!is_wifi_ap_driver_loaded())
++                break;
++            usleep(500000);
++        }
++        usleep(500000); /* allow card removal */
++        if (count) {
++            return 0;
++        }
++        return -1;
++    } else
++        return 0;//return -1;
+ #else
+     property_set(DRIVER_PROP_NAME, "unloaded");
+     return 0;
+@@ -426,7 +975,7 @@ int wifi_start_supplicant(int p2p_supported)
+     }
+ 
+     /* Check whether already running */
+-    if (property_get(supplicant_prop_name, supp_status, NULL)
++    if (property_get(supplicant_name, supp_status, NULL)
+             && strcmp(supp_status, "running") == 0) {
+         return 0;
+     }
+-- 
+1.9.1
+
